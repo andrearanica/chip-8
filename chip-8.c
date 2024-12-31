@@ -72,7 +72,7 @@ void chip8_load_program(Chip8 chip_8, char* path) {
 
 void chip8_run(Chip8 chip8, bool debug) {
     uint16_t instruction;
-    int opcode, x, y, kk, nnn, n, result;
+    int opcode, x, y, kk, nnn, n, result, value;
     
     while(1) {
         instruction = chip8->memory[chip8->PC] << 8 | chip8->memory[chip8->PC+1];
@@ -193,13 +193,23 @@ void chip8_run(Chip8 chip8, bool debug) {
                 chip8_draw_sprite(chip8, chip8->registers[x], chip8->registers[y], n);
                 break;
             case 0xf:
-                switch(kk) {
-                    case 55:
-                        int memory_address = chip8->I;
+                printf("%d", kk);
+                switch (kk) {
+                    case 0x55:
                         for (int i = 0; i < x; i++) {
-                            chip8->memory[memory_address] = chip8->registers[i];
-                            memory_address++;
+                            chip8->memory[chip8->I + i] = chip8->registers[i];
                         }
+                        break;
+                    case 0x65:
+                        for (int i = 0; i < x; i++) {
+                            chip8->registers[i] = chip8->memory[chip8->I + i];
+                        }
+                        break;
+                    case 0x33:
+                        value = chip8->registers[x];
+                        chip8->memory[chip8->I] = (value / 100) % 10;
+                        chip8->memory[chip8->I+1] = (value / 10) % 10;
+                        chip8->memory[chip8->I+2] = value % 10;
                         break;
                     default:
                         fprintf(stderr, "Error: instruction '%04X' not supported\n", instruction);
