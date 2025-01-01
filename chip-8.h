@@ -24,6 +24,8 @@ struct _chip_8 {
     uint8_t sound_timer;
 
     int display[DISPLAY_DIM_Y * DISPLAY_DIM_X];
+
+    bool keyboard[16];
 };
 
 typedef struct _chip_8 * Chip8;

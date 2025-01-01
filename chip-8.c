@@ -2,6 +2,7 @@
 * Implementation file for the 'chip-8' library
 */
 
+#include <SDL2/SDL.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
@@ -9,9 +10,11 @@
 #include "chip-8.h"
 
 #define BUFFER_DIM 256
+#define TIMER_INTERVAL 1000 / 60 // 60 Hz
 
-void chip8_print_debug();
+void chip8_draw_screen(Chip8);
 void chip8_draw_sprite(Chip8, int, int, int);
+void chip8_handle_keyboard(Chip8, SDL_Event*);
 
 uint8_t chip8_char_sprites[80] = {
     0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
@@ -73,8 +76,23 @@ void chip8_load_program(Chip8 chip_8, char* path) {
 void chip8_run(Chip8 chip8, bool debug) {
     uint16_t instruction;
     int opcode, x, y, kk, nnn, n, result, value;
-    
+    uint8_t random_number;
+    Uint32 timer_last_tick = SDL_GetTicks();
+
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER) != 0) {
+        SDL_Log("Error: cannot initialize SDL");
+        exit(EXIT_FAILURE);
+    }
+
     while(1) {
+        Uint32 current_tick = SDL_GetTicks(); 
+        if (current_tick - timer_last_tick >= TIMER_INTERVAL) {
+            if (chip8->delay_timer > 0) {
+                chip8->delay_timer -= 1;
+            }
+            timer_last_tick = current_tick;
+        }
+
         instruction = chip8->memory[chip8->PC] << 8 | chip8->memory[chip8->PC+1];
         opcode = (instruction & 0xF000) >> 12;
         x = (instruction & 0x0F00) >> 8;
@@ -163,7 +181,7 @@ void chip8_run(Chip8 chip8, bool debug) {
                         chip8->registers[x] -= chip8->registers[y];
                         break;
                     case 6:
-                        chip8->registers[x] >>= chip8->registers[y];
+                        chip8->registers[x] >>= 1;
                         break;
                     case 7:
                         if (chip8->registers[y] > chip8->registers[x]) {
@@ -174,10 +192,11 @@ void chip8_run(Chip8 chip8, bool debug) {
                         chip8->registers[x] = chip8->registers[y] - chip8->registers[x];
                         break;
                     case 0xE:
-                        chip8->registers[x] <<= chip8->registers[y];
+                        chip8->registers[x] <<= 1;
                         break;
                     default:
                         fprintf(stderr, "Error: instruction '%04X' not supported\n", instruction);
+                        exit(EXIT_FAILURE);
                 }
                 break;
             case 0x9:
@@ -189,27 +208,60 @@ void chip8_run(Chip8 chip8, bool debug) {
                 // Load inside I register
                 chip8->I = nnn;
                 break;
+            case 0xc:
+                random_number = rand();
+                chip8->registers[x] = random_number & kk;
+                break;
             case 0xd:
                 chip8_draw_sprite(chip8, chip8->registers[x], chip8->registers[y], n);
                 break;
-            case 0xf:
-                printf("%d", kk);
-                switch (kk) {
-                    case 0x55:
-                        for (int i = 0; i < x; i++) {
-                            chip8->memory[chip8->I + i] = chip8->registers[i];
+            case 0xe:
+                switch(kk) {
+                    case 0xA1:
+                        value = chip8->registers[x];
+                        if (chip8->keyboard[value] != 1) {
+                            chip8->PC += 2;
                         }
                         break;
-                    case 0x65:
-                        for (int i = 0; i < x; i++) {
-                            chip8->registers[i] = chip8->memory[chip8->I + i];
-                        }
+                    default:
+                        fprintf(stderr, "Error: instruction '%04X' not supported\n", instruction);
+                        exit(EXIT_FAILURE);
+                }
+                break;
+            case 0xf:
+                switch (kk) {
+                    case 0x07:
+                        chip8->registers[x] = chip8->delay_timer;
+                        break;
+                    case 0x15:
+                        chip8->delay_timer = chip8->registers[x];
+                        break;
+                    case 0x18:
+                        chip8->sound_timer = chip8->registers[x];
+                        break;
+                    case 0x1E:
+                        chip8->I += chip8->registers[x];
                         break;
                     case 0x33:
                         value = chip8->registers[x];
                         chip8->memory[chip8->I] = (value / 100) % 10;
                         chip8->memory[chip8->I+1] = (value / 10) % 10;
                         chip8->memory[chip8->I+2] = value % 10;
+                        break;
+                    case 0x29:
+                        value = chip8->registers[x];
+                        value = 0x50 + value;
+                        chip8->I = value;
+                        break;
+                    case 0x55:
+                        for (int i = 0; i <= x; i++) {
+                            chip8->memory[chip8->I + i] = chip8->registers[i];
+                        }
+                        break;
+                    case 0x65:
+                        for (int i = 0; i <= x; i++) {
+                            chip8->registers[i] = chip8->memory[chip8->I + i];
+                        }
                         break;
                     default:
                         fprintf(stderr, "Error: instruction '%04X' not supported\n", instruction);
@@ -223,18 +275,23 @@ void chip8_run(Chip8 chip8, bool debug) {
                 break;
         }
 
-        usleep(50000);
+        usleep(5000);
         system("clear");
 
-        for (int i = 0; i < DISPLAY_DIM_Y; i++) {
-            for (int j = 0; j < DISPLAY_DIM_X; j++) {
-                if (chip8->display[i * DISPLAY_DIM_X + j] == 1) {
-                    printf("█");
-                } else {
-                    printf(" ");
-                }
-            }
-            printf("\n");
+        if (chip8->delay_timer > 0) {
+            chip8->delay_timer -= 1;
+        }
+        chip8_draw_screen(chip8);
+
+        SDL_Event event;
+        while (SDL_PollEvent(&event)) {
+            scanf("%d");
+            if (event.type == SDL_QUIT) {
+                // Gestisci l'evento di uscita
+            } else if (event.type == SDL_KEYDOWN || event.type == SDL_KEYUP) { 
+                // Gestisci l'evento della tastiera 
+                chip8_handle_keyboard(chip8, &event); 
+            } 
         }
 
         if (false) {
@@ -269,7 +326,7 @@ void chip8_run(Chip8 chip8, bool debug) {
             printf("x: %d\n", x);
             printf("y: %d\n", y);
 
-            // scanf("%s");
+            scanf("%s");
         }
     }
 }
@@ -288,11 +345,81 @@ void chip8_draw_sprite(Chip8 chip8, int x, int y, int n) {
                     chip8->VF = 1;
                 }
 
-                chip8->display[(x+j)+(y*DISPLAY_DIM_X)] = 1;
+                chip8->display[(x+j)+(y*DISPLAY_DIM_X)] = 1 ^ old_pixel;
             }
             sprite = sprite << 1;
         }
         printf("\n");
         y++;
+    }
+}
+
+void chip8_draw_screen(Chip8 chip8) {
+    for (int i = 0; i < DISPLAY_DIM_Y; i++) {
+        for (int j = 0; j < DISPLAY_DIM_X; j++) {
+            if (chip8->display[i * DISPLAY_DIM_X + j] == 1) {
+                printf("█");
+            } else {
+                printf(" ");
+            }
+        }
+        printf("\n");
+    }
+}
+
+void chip8_handle_keyboard(Chip8 chip8, SDL_Event* event) {
+    scanf("%d");
+
+    bool key_down = (event->type == SDL_KEYDOWN);
+
+    switch(event->key.keysym.sym) {
+        case SDLK_1:
+            chip8->keyboard[0x1] = key_down;
+            break;
+        case SDLK_2:
+            chip8->keyboard[0x2] = key_down;
+            break;
+        case SDLK_3:
+            chip8->keyboard[0x3] = key_down;
+            break;
+        case SDLK_4:
+            chip8->keyboard[0xC] = key_down;
+            break;
+        case SDLK_q:
+            chip8->keyboard[0x4] = key_down;
+            break;
+        case SDLK_w:
+            chip8->keyboard[0x5] = key_down;
+            break;
+        case SDLK_e:
+            chip8->keyboard[0x6] = key_down;
+            break;
+        case SDLK_r:
+            chip8->keyboard[0xD] = key_down;
+            break;
+        case SDLK_a:
+            chip8->keyboard[0x7] = key_down;
+            break;
+        case SDLK_s:
+            chip8->keyboard[0x8] = key_down;
+            break;
+        case SDLK_d:
+            chip8->keyboard[0x9] = key_down;
+            break;
+        case SDLK_f:
+            chip8->keyboard[0xe] = key_down;
+            break;
+        case SDLK_z:
+            chip8->keyboard[0xA] = key_down;
+            break;
+        case SDLK_x:
+            chip8->keyboard[0x0] = key_down;
+            break;
+        case SDLK_c:
+            chip8->keyboard[0xB] = key_down;
+            break;
+        case SDLK_v:
+            chip8->keyboard[0xF] = key_down;
+            break;
     }
 }
