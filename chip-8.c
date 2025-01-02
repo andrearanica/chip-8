@@ -12,7 +12,7 @@
 #define BUFFER_DIM 256
 #define TIMER_INTERVAL 1000 / 60 // 60 Hz
 
-void chip8_draw_screen(Chip8);
+void chip8_draw_screen(Chip8, SDL_Renderer*);
 void chip8_draw_sprite(Chip8, int, int, int);
 void chip8_handle_keyboard(Chip8, SDL_Event*);
 
@@ -84,15 +84,16 @@ void chip8_run(Chip8 chip8, bool debug) {
         exit(EXIT_FAILURE);
     }
 
-    while(1) {
-        Uint32 current_tick = SDL_GetTicks(); 
-        if (current_tick - timer_last_tick >= TIMER_INTERVAL) {
-            if (chip8->delay_timer > 0) {
-                chip8->delay_timer -= 1;
-            }
-            timer_last_tick = current_tick;
-        }
+    SDL_Window* win = SDL_CreateWindow("Chip 8", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 512, 256, SDL_WINDOW_SHOWN);
+    SDL_Renderer* renderer = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
+    SDL_RenderSetLogicalSize(renderer, 64, 32);
 
+    bool running = true;
+    while(running) {
+        if (chip8->delay_timer > 0) {
+            chip8->delay_timer -= 1;
+        }
+        
         instruction = chip8->memory[chip8->PC] << 8 | chip8->memory[chip8->PC+1];
         opcode = (instruction & 0xF000) >> 12;
         x = (instruction & 0x0F00) >> 8;
@@ -275,59 +276,23 @@ void chip8_run(Chip8 chip8, bool debug) {
                 break;
         }
 
-        usleep(5000);
-        system("clear");
-
         if (chip8->delay_timer > 0) {
             chip8->delay_timer -= 1;
         }
-        chip8_draw_screen(chip8);
+        chip8_draw_screen(chip8, renderer);
+        SDL_Delay(1000 / 60);
 
-        SDL_Event event;
+        /*SDL_Event event;
         while (SDL_PollEvent(&event)) {
             scanf("%d");
             if (event.type == SDL_QUIT) {
                 // Gestisci l'evento di uscita
             } else if (event.type == SDL_KEYDOWN || event.type == SDL_KEYUP) { 
                 // Gestisci l'evento della tastiera 
-                chip8_handle_keyboard(chip8, &event); 
+                printf("Tasto premuto");
+                // chip8_handle_keyboard(chip8, &event);
             } 
-        }
-
-        if (false) {
-            system("clear");
-            int buffer_n = 0;
-            int memory_buffer[MEMORY_SIZE] = {};
-            int addresses_buffer[MEMORY_SIZE] = {};
-            for (int i = 0; i < MEMORY_SIZE; i++) {
-                if (chip8->memory[i] != 0) {
-                    memory_buffer[buffer_n] = chip8->memory[i];
-                    addresses_buffer[buffer_n] = i;
-                    buffer_n++;
-                }
-            }
-
-            
-
-            printf("## REGISTERS ##\t\t\t\t\t## DISPLAY ##\n");
-
-            for (int i = 0; i < sizeof(chip8->registers); i++) {
-                printf("| V%d\t | %d\t |\n", i, chip8->registers[i]);
-            }
-            printf("| PC\t | %d\t |\n", chip8->PC);
-            printf("| I\t | %d\t |\n", chip8->I);
-
-            for (int i = 0; i < buffer_n; i++) {
-                // printf("%d\t| %d\t|\n", addresses_buffer[i], memory_buffer[i]);
-            }
-
-            printf("Instruction: %04x\n", instruction);
-            printf("Opcode: %01x\n", opcode);
-            printf("x: %d\n", x);
-            printf("y: %d\n", y);
-
-            scanf("%s");
-        }
+        }*/
     }
 }
 
@@ -349,22 +314,22 @@ void chip8_draw_sprite(Chip8 chip8, int x, int y, int n) {
             }
             sprite = sprite << 1;
         }
-        printf("\n");
         y++;
     }
 }
 
-void chip8_draw_screen(Chip8 chip8) {
+void chip8_draw_screen(Chip8 chip8, SDL_Renderer* renderer) {
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+    SDL_RenderClear(renderer);
+    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
     for (int i = 0; i < DISPLAY_DIM_Y; i++) {
         for (int j = 0; j < DISPLAY_DIM_X; j++) {
             if (chip8->display[i * DISPLAY_DIM_X + j] == 1) {
-                printf("█");
-            } else {
-                printf(" ");
+                SDL_RenderDrawPoint(renderer, j, i);
             }
         }
-        printf("\n");
     }
+    SDL_RenderPresent(renderer);
 }
 
 void chip8_handle_keyboard(Chip8 chip8, SDL_Event* event) {
