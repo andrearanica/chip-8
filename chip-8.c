@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <unistd.h>
+#include <pthread.h>
 #include "chip-8.h"
 
 #define BUFFER_DIM 256
@@ -88,6 +89,7 @@ void chip8_run(Chip8 chip8, bool debug) {
     SDL_Renderer* renderer = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
     SDL_RenderSetLogicalSize(renderer, 64, 32);
 
+    SDL_Event event;
     bool running = true;
     while(running) {
         if (chip8->delay_timer > 0) {
@@ -224,6 +226,12 @@ void chip8_run(Chip8 chip8, bool debug) {
                             chip8->PC += 2;
                         }
                         break;
+                    case 0x9E:
+                        value = chip8->registers[x];
+                        if (chip8->keyboard[value] == 1) {
+                            chip8->PC += 2;
+                        }
+                        break;
                     default:
                         fprintf(stderr, "Error: instruction '%04X' not supported\n", instruction);
                         exit(EXIT_FAILURE);
@@ -276,23 +284,34 @@ void chip8_run(Chip8 chip8, bool debug) {
                 break;
         }
 
+        while (SDL_PollEvent(&event)) {
+            switch(event.type) {
+                case SDL_KEYDOWN:
+                    chip8_handle_keyboard(chip8, &event);
+                    break;
+                case SDL_KEYUP:
+                    chip8_handle_keyboard(chip8, &event);
+                    break;
+                case SDL_QUIT:
+                    SDL_DestroyRenderer(renderer);
+                    SDL_DestroyWindow(win);
+                    SDL_Quit();
+                    exit(EXIT_SUCCESS);
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        if (chip8->sound_timer != 0) {
+            
+        }
+
         if (chip8->delay_timer > 0) {
             chip8->delay_timer -= 1;
         }
         chip8_draw_screen(chip8, renderer);
-        SDL_Delay(1000 / 60);
-
-        /*SDL_Event event;
-        while (SDL_PollEvent(&event)) {
-            scanf("%d");
-            if (event.type == SDL_QUIT) {
-                // Gestisci l'evento di uscita
-            } else if (event.type == SDL_KEYDOWN || event.type == SDL_KEYUP) { 
-                // Gestisci l'evento della tastiera 
-                printf("Tasto premuto");
-                // chip8_handle_keyboard(chip8, &event);
-            } 
-        }*/
+        SDL_Delay(1000 / 120);
     }
 }
 
@@ -333,58 +352,59 @@ void chip8_draw_screen(Chip8 chip8, SDL_Renderer* renderer) {
 }
 
 void chip8_handle_keyboard(Chip8 chip8, SDL_Event* event) {
-    scanf("%d");
-
     bool key_down = (event->type == SDL_KEYDOWN);
 
+    int address;
     switch(event->key.keysym.sym) {
         case SDLK_1:
-            chip8->keyboard[0x1] = key_down;
+            address = 0x1;
             break;
         case SDLK_2:
-            chip8->keyboard[0x2] = key_down;
+            address = 0x2;
             break;
         case SDLK_3:
-            chip8->keyboard[0x3] = key_down;
+            address = 0x3;
             break;
         case SDLK_4:
-            chip8->keyboard[0xC] = key_down;
+            address = 0xC;
             break;
         case SDLK_q:
-            chip8->keyboard[0x4] = key_down;
+            address = 0x4;
             break;
         case SDLK_w:
-            chip8->keyboard[0x5] = key_down;
+            address = 0x5;
             break;
         case SDLK_e:
-            chip8->keyboard[0x6] = key_down;
+            address = 0x6;
             break;
         case SDLK_r:
-            chip8->keyboard[0xD] = key_down;
+            address = 0xD;
             break;
         case SDLK_a:
-            chip8->keyboard[0x7] = key_down;
+            address = 0x7;
             break;
         case SDLK_s:
-            chip8->keyboard[0x8] = key_down;
+            address = 0x8;
             break;
         case SDLK_d:
-            chip8->keyboard[0x9] = key_down;
+            address = 0x9;
             break;
         case SDLK_f:
-            chip8->keyboard[0xe] = key_down;
+            address = 0xe;
             break;
         case SDLK_z:
-            chip8->keyboard[0xA] = key_down;
+            address = 0xA;
             break;
         case SDLK_x:
-            chip8->keyboard[0x0] = key_down;
+            address = 0x0;
             break;
         case SDLK_c:
-            chip8->keyboard[0xB] = key_down;
+            address = 0xB;
             break;
         case SDLK_v:
-            chip8->keyboard[0xF] = key_down;
+            address = 0xF;
             break;
     }
+
+    chip8->keyboard[address] = key_down;
 }
