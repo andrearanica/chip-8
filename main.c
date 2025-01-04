@@ -4,7 +4,7 @@
 
 int main(int argc, void** argv) {
     if (argc <= 1) {
-        printf("Please provide the program path\n");
+        printf("Error: usage ./chip8 ./path/to/rom\n");
         exit(EXIT_FAILURE);
     }
     

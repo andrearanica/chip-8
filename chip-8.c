@@ -54,7 +54,7 @@ Chip8 chip8_new() {
     return chip_8;
 }
 
-void chip8_load_program(Chip8 chip_8, char* path) {
+void chip8_load_program(Chip8 chip8, char* path) {
     FILE* file = fopen(path, "rb");
     if (file == NULL) {
         perror(path);
@@ -66,11 +66,11 @@ void chip8_load_program(Chip8 chip_8, char* path) {
     int size = ftell(file);
     fseek(file, 0, SEEK_SET);
 
-    fread(chip_8->memory+0x200, sizeof(uint16_t), size, file);
+    fread(chip8->memory+0x200, sizeof(uint16_t), size, file);
 
     int min_sprite_address = 0x50;
     for (int i = 0; i < sizeof(chip8_char_sprites); i++) {
-        chip_8->memory[min_sprite_address+i] = chip8_char_sprites[i];
+        chip8->memory[min_sprite_address+i] = chip8_char_sprites[i];
     }
 }
 
@@ -170,16 +170,16 @@ void chip8_run(Chip8 chip8, bool debug) {
                         result = chip8->registers[x] + chip8->registers[y];
                         chip8->registers[x] = result;
                         if (result > 255) {
-                            chip8->VF = 1;
+                            chip8->registers[0xF] = 1;
                         } else {
-                            chip8->VF = 0;
+                            chip8->registers[0xF] = 0;
                         }
                         break;
                     case 5:
                         if (chip8->registers[x] > chip8->registers[y]) {
-                            chip8->VF = 1;
+                            chip8->registers[0xF] = 1;
                         } else {
-                            chip8->VF = 0;
+                            chip8->registers[0xF] = 0;
                         }
                         chip8->registers[x] -= chip8->registers[y];
                         break;
@@ -188,9 +188,9 @@ void chip8_run(Chip8 chip8, bool debug) {
                         break;
                     case 7:
                         if (chip8->registers[y] > chip8->registers[x]) {
-                            chip8->VF = 1;
+                            chip8->registers[0xF] = 1;
                         } else {
-                            chip8->VF = 0;
+                            chip8->registers[0xF] = 0;
                         }
                         chip8->registers[x] = chip8->registers[y] - chip8->registers[x];
                         break;
@@ -304,32 +304,33 @@ void chip8_run(Chip8 chip8, bool debug) {
         }
 
         if (chip8->sound_timer != 0) {
-            
+            // printf("BEEP");
         }
 
         if (chip8->delay_timer > 0) {
             chip8->delay_timer -= 1;
         }
         chip8_draw_screen(chip8, renderer);
-        SDL_Delay(1000 / 120);
+        SDL_Delay(1000 / 250);
     }
 }
 
 void chip8_draw_sprite(Chip8 chip8, int x, int y, int n) {
     uint8_t sprite_row = 0;
-    int sprite, mask, old_pixel;
+    int sprite, mask, old_pixel, screen_index;
+
+    chip8->registers[0xF] = 0;
 
     for (int i = 0; i < n; i++) {
         sprite = chip8->memory[chip8->I + i];
         for (int j = 0; j < 8; j++) {
-            if (sprite & 0x80) {
-                old_pixel = chip8->display[(x+j)+(y*DISPLAY_DIM_X)];
-
+            screen_index = (x+j)+(y*DISPLAY_DIM_X);
+            old_pixel = chip8->display[screen_index];
+            if ((sprite & 0x80) != 0) {
                 if (old_pixel == 1) {
-                    chip8->VF = 1;
+                    chip8->registers[0xF] = 1;
                 }
-
-                chip8->display[(x+j)+(y*DISPLAY_DIM_X)] = 1 ^ old_pixel;
+                chip8->display[screen_index] = 1 ^ old_pixel;
             }
             sprite = sprite << 1;
         }
