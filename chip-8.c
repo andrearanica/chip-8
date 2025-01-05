@@ -78,8 +78,7 @@ void chip8_run(Chip8 chip8, bool debug) {
     uint16_t instruction;
     int opcode, x, y, kk, nnn, n, result, value;
     uint8_t random_number;
-    Uint32 timer_last_tick = SDL_GetTicks();
-
+    
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER) != 0) {
         SDL_Log("Error: cannot initialize SDL");
         exit(EXIT_FAILURE);
@@ -304,7 +303,7 @@ void chip8_run(Chip8 chip8, bool debug) {
         }
 
         if (chip8->sound_timer != 0) {
-            // printf("BEEP");
+            // TODO beep
         }
 
         if (chip8->delay_timer > 0) {
