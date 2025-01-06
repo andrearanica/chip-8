@@ -5,7 +5,7 @@
 int main(int argc, void** argv) {
     Chip8 chip8 = chip8_new();
     
-    if (argc == 2) {
+    if (argc == 1) {
         // TODO show roms menu and load rom
     } else if (argc == 2) {
         chip8_load_program(chip8, argv[1]);

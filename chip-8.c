@@ -8,6 +8,7 @@
 #include <stdbool.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <sys/wait.h>
 #include "chip-8.h"
 
 #define BUFFER_DIM 256
@@ -90,11 +91,7 @@ void chip8_run(Chip8 chip8, bool debug) {
 
     SDL_Event event;
     bool running = true;
-    while(running) {
-        if (chip8->delay_timer > 0) {
-            chip8->delay_timer -= 1;
-        }
-        
+    while(running) {        
         instruction = chip8->memory[chip8->PC] << 8 | chip8->memory[chip8->PC+1];
         opcode = (instruction & 0xF000) >> 12;
         x = (instruction & 0x0F00) >> 8;
@@ -302,13 +299,19 @@ void chip8_run(Chip8 chip8, bool debug) {
             }
         }
 
-        if (chip8->sound_timer != 0) {
-            // TODO beep
-        }
-
         if (chip8->delay_timer > 0) {
             chip8->delay_timer -= 1;
         }
+
+        if (chip8->sound_timer != 0) {
+            chip8->sound_timer -= 1;
+            int pid = fork();
+            if (pid == 0) {
+                system("beep");
+                exit(EXIT_SUCCESS);
+            }
+        }
+
         chip8_draw_screen(chip8, renderer);
         SDL_Delay(1000 / 250);
     }
