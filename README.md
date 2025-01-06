@@ -26,4 +26,5 @@ Finally, you can run the emulator calling the executable file and passing the pa
 
 ## Credits
 
-I took inspiration and ROMS from [https://github.com/Klairm/chip8](https://github.com/Klairm/chip8)
+I took inspiration from [https://github.com/Klairm/chip8](https://github.com/Klairm/chip8)  
+ROMs folder is a submodule of [this](https://github.com/kripod/chip8-roms) repository
