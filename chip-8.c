@@ -248,7 +248,9 @@ void chip8_run(Chip8 chip8, bool debug) {
                                     break;
                             }
                         }
-                        chip8->registers[x] = key_pressed;
+                        if (key_pressed > -1) {
+                            chip8->registers[x] = key_pressed;
+                        }
                         break;
                     case 0x07:
                         chip8->registers[x] = chip8->delay_timer;
@@ -374,7 +376,9 @@ void chip8_handle_keyboard(Chip8 chip8, SDL_Event* event) {
 
     int address = chip8_key_to_address(event->key.keysym.sym);
 
-    chip8->keyboard[address] = key_down;
+    if (address > -1) {
+        chip8->keyboard[address] = key_down;
+    }
 }
 
 int chip8_key_to_address(int key) {
@@ -427,6 +431,9 @@ int chip8_key_to_address(int key) {
             break;
         case SDLK_v:
             address = 0xF;
+            break;
+        default:
+            address = -1;
             break;
     }
 

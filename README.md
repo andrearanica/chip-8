@@ -26,5 +26,4 @@ Finally, you can run the emulator calling the executable file and passing the pa
 
 ## Credits
 
-I took inspiration and ROMS from [https://github.com/Klairm/chip8](https://github.com/Klairm/chip8)  
-Sound Effect by [Lesiakower](https://pixabay.com/it/users/lesiakower-25701529/?utm_source=link-attribution&utm_medium=referral&utm_campaign=music&utm_content=151797) from [Pixabay](https://pixabay.com/sound-effects//?utm_source=link-attribution&utm_medium=referral&utm_campaign=music&utm_content=151797)
+I took inspiration and ROMS from [https://github.com/Klairm/chip8](https://github.com/Klairm/chip8)
