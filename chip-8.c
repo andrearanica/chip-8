@@ -17,6 +17,7 @@
 void chip8_draw_screen(Chip8, SDL_Renderer*);
 void chip8_draw_sprite(Chip8, int, int, int);
 void chip8_handle_keyboard(Chip8, SDL_Event*);
+int chip8_key_to_address(int key);
 
 uint8_t chip8_char_sprites[80] = {
     0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
@@ -235,6 +236,20 @@ void chip8_run(Chip8 chip8, bool debug) {
                 break;
             case 0xf:
                 switch (kk) {
+                    case 0xa:
+                        int key_pressed = -1;
+                        while (key_pressed < 0) {
+                            SDL_PollEvent(&event);
+                            switch(event.type) {
+                                case SDL_KEYDOWN:
+                                    key_pressed = chip8_key_to_address(event.key.keysym.sym);
+                                    break;
+                                default:
+                                    break;
+                            }
+                        }
+                        chip8->registers[x] = key_pressed;
+                        break;
                     case 0x07:
                         chip8->registers[x] = chip8->delay_timer;
                         break;
@@ -357,8 +372,14 @@ void chip8_draw_screen(Chip8 chip8, SDL_Renderer* renderer) {
 void chip8_handle_keyboard(Chip8 chip8, SDL_Event* event) {
     bool key_down = (event->type == SDL_KEYDOWN);
 
+    int address = chip8_key_to_address(event->key.keysym.sym);
+
+    chip8->keyboard[address] = key_down;
+}
+
+int chip8_key_to_address(int key) {
     int address;
-    switch(event->key.keysym.sym) {
+    switch(key) {
         case SDLK_1:
             address = 0x1;
             break;
@@ -409,5 +430,5 @@ void chip8_handle_keyboard(Chip8 chip8, SDL_Event* event) {
             break;
     }
 
-    chip8->keyboard[address] = key_down;
+    return address;
 }
