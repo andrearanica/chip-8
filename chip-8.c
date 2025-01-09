@@ -28,7 +28,7 @@ void chip8_print_debug_info(Chip8 chip8, uint16_t instruction);
 // Memory bytes that store the standard characters as sprites
 uint8_t chip8_char_sprites[80] = {
     0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
-    0x20, 0x60, 0x50, 0x20, 0xF0, // 1
+    0x60, 0xE0, 0x60, 0x60, 0xF0, // 1
     0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
     0xF0, 0x10, 0xF0, 0x10, 0xF0, // 3
     0x90, 0x90, 0xF0, 0x10, 0x10, // 4
@@ -306,7 +306,7 @@ void chip8_execute_instruction(Chip8 chip8, uint16_t instruction) {
                     break;
                 case 0x29:
                     value = chip8->registers[x];
-                    value = 0x50 + value;
+                    value = 0x50 + 5*value;
                     chip8->I = value;
                     break;
                 case 0x55:
