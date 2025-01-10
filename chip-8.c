@@ -36,7 +36,7 @@ uint8_t chip8_char_sprites[80] = {
     0xF0, 0x80, 0xF0, 0x90, 0xF0, // 6
     0xF0, 0x10, 0x20, 0x40, 0x80, // 7
     0xF0, 0x90, 0xF0, 0x90, 0xF0, // 8
-    0xF0, 0x90, 0xF0, 0x01, 0xF0, // 9
+    0xF0, 0x90, 0xF0, 0x10, 0xF0, // 9
     0xF0, 0x90, 0xF0, 0x90, 0x90, // A
 	0xE0, 0x90, 0xE0, 0x90, 0xE0, // B
 	0xF0, 0x80, 0x80, 0x80, 0xF0, // C
@@ -242,6 +242,9 @@ void chip8_execute_instruction(Chip8 chip8, uint16_t instruction) {
             // Load inside I register
             chip8->I = nnn;
             break;
+        case 0xb:
+            chip8->PC = nnn + chip8->registers[0];
+            break;
         case 0xc:
             random_number = rand();
             chip8->registers[x] = random_number & kk;
@@ -395,14 +398,19 @@ int chip8_key_to_address(int key) {
 // Activates the bits of the display to draw the sprite with the given data
 void chip8_draw_sprite(Chip8 chip8, int x, int y, int n) {
     uint8_t sprite_row = 0;
-    int sprite, mask, old_pixel, screen_index;
+    int sprite, mask, old_pixel, x_index, y_index, screen_index;
 
     chip8->registers[0xF] = 0;
 
     for (int i = 0; i < n; i++) {
         sprite = chip8->memory[chip8->I + i];
         for (int j = 0; j < 8; j++) {
-            screen_index = (x+j)+(y*DISPLAY_DIM_X);
+            x_index = x + j;
+            if (x_index >= DISPLAY_DIM_X) {
+                x_index -= DISPLAY_DIM_X;
+            }
+            y_index = y * DISPLAY_DIM_X;
+            screen_index = x_index + y_index;
             old_pixel = chip8->display[screen_index];
             if ((sprite & 0x80) != 0) {
                 if (old_pixel == 1) {
