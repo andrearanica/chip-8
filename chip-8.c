@@ -64,6 +64,15 @@ Chip8 chip8_new() {
     chip_8->delay_timer = 0;
     chip_8->sound_timer = 0;
 
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER) != 0) {
+        SDL_Log("Error: cannot initialize SDL");
+        exit(EXIT_FAILURE);
+    }
+
+    win = SDL_CreateWindow("Chip 8", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 512, 256, SDL_WINDOW_SHOWN);
+    display_renderer = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
+    SDL_RenderSetLogicalSize(display_renderer, 64, 32);
+
     return chip_8;
 }
 
@@ -90,34 +99,32 @@ void chip8_load_program(Chip8 chip8, char* path) {
 
 // Starts the execution of the given Chip8 configuration
 void chip8_run(Chip8 chip8, bool debug) {
+    bool running = true;
+    while (running) {
+        chip8_run_instruction(chip8, debug);
+        if (chip8->PC >= sizeof(chip8->memory)) {
+            running = false;
+        }
+    }
+}
+
+void chip8_run_instruction(Chip8 chip8, bool debug) {
     uint16_t instruction;
     uint8_t random_number;
-    
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER) != 0) {
-        SDL_Log("Error: cannot initialize SDL");
-        exit(EXIT_FAILURE);
+
+    SDL_Event event;   
+    instruction = chip8->memory[chip8->PC] << 8 | chip8->memory[chip8->PC+1];
+    chip8->PC += 2;
+    chip8_execute_instruction(chip8, instruction);
+    chip8_handle_events(chip8);
+    chip8_handle_timers(chip8);
+    chip8_render_display(chip8, display_renderer);
+
+    if (debug) {
+        chip8_print_debug_info(chip8, instruction);
     }
 
-    win = SDL_CreateWindow("Chip 8", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 512, 256, SDL_WINDOW_SHOWN);
-    display_renderer = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
-    SDL_RenderSetLogicalSize(display_renderer, 64, 32);
-
-    SDL_Event event;
-    bool running = true;
-    while(running) {        
-        instruction = chip8->memory[chip8->PC] << 8 | chip8->memory[chip8->PC+1];
-        chip8->PC += 2;
-        chip8_execute_instruction(chip8, instruction);
-        chip8_handle_events(chip8);
-        chip8_handle_timers(chip8);
-        chip8_render_display(chip8, display_renderer);
-
-        if (debug) {
-            chip8_print_debug_info(chip8, instruction);
-        }
-
-        SDL_Delay(1000 / 250);
-    }
+    SDL_Delay(1000 / 250);
 }
 
 // Returns the parts that compose the given instruction as pointers

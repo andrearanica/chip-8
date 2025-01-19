@@ -33,5 +33,6 @@ typedef struct _chip_8 * Chip8;
 extern Chip8 chip8_new();
 extern void  chip8_load_program(Chip8, char*);
 extern void  chip8_run(Chip8, bool);
+extern void  chip8_run_instruction(Chip8, bool);
 
 #endif
